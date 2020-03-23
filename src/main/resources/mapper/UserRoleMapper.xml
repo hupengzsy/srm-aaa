@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="org.srm.iam.infra.mapper.UserRoleMapper">
+    <!-- 可根据自己的需求，是否要使用 -->
+    <resultMap id="BaseResultMap" type="org.srm.iam.domain.entity.User">
+        <result column="id" property="id" jdbcType="DECIMAL"/>
+        <result column="login_name" property="loginName" jdbcType="VARCHAR"/>
+        <result column="email" property="email" jdbcType="VARCHAR"/>
+        <result column="organization_id" property="organizationId" jdbcType="DECIMAL"/>
+        <result column="HASH_PASSWORD" property="hashPassword" jdbcType="VARCHAR"/>
+        <result column="real_name" property="realName" jdbcType="VARCHAR"/>
+        <result column="phone" property="phone" jdbcType="VARCHAR"/>
+        <result column="INTERNATIONAL_TEL_CODE" property="internationalTelCode" jdbcType="VARCHAR"/>
+        <result column="image_url" property="imageUrl" jdbcType="VARCHAR"/>
+        <result column="profile_photo" property="profilePhoto" jdbcType="VARCHAR"/>
+        <result column="language" property="language" jdbcType="VARCHAR"/>
+        <result column="time_zone" property="timeZone" jdbcType="VARCHAR"/>
+        <result column="last_password_updated_at" property="lastPasswordUpdatedAt" jdbcType="DATE"/>
+        <result column="last_login_at" property="lastLoginAt" jdbcType="DATE"/>
+        <result column="is_enabled" property="isEnabled" jdbcType="DECIMAL"/>
+        <result column="is_locked" property="isLocked" jdbcType="DECIMAL"/>
+        <result column="is_ldap" property="isLdap" jdbcType="DECIMAL"/>
+        <result column="is_admin" property="isAdmin" jdbcType="DECIMAL"/>
+        <result column="locked_until_at" property="lockedUntilAt" jdbcType="DATE"/>
+        <result column="password_attempt" property="passwordAttempt" jdbcType="DECIMAL"/>
+        <result column="object_version_number" property="objectVersionNumber" jdbcType="DECIMAL"/>
+        <result column="created_by" property="createdBy" jdbcType="DECIMAL"/>
+        <result column="creation_date" property="creationDate" jdbcType="DATE"/>
+        <result column="last_updated_by" property="lastUpdatedBy" jdbcType="DECIMAL"/>
+        <result column="last_update_date" property="lastUpdateDate" jdbcType="DATE"/>
+        <result column="user_type" property="userType" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <resultMap id="userRoleResultMap" type="org.srm.iam.api.dto.UserRoleDTO">
+        <result column="h_tenant_id" property="organizationId" jdbcType="DECIMAL"/>
+        <result column="tenant_name" property="cropName" jdbcType="VARCHAR"/>
+        <collection property="roles" ofType="org.srm.iam.domain.entity.Role">
+            <result column="id" property="id" jdbcType="DECIMAL"/>
+            <result column="name" property="name" jdbcType="VARCHAR"/>
+            <result column="code" property="code" jdbcType="VARCHAR"/>
+        </collection>
+
+    </resultMap>
+
+    <select id="listRoleAndTenantByUserId" resultMap="userRoleResultMap">
+        select
+        ht.tenant_name,
+        ir.h_tenant_id,
+        ir.id,
+        ir.name,
+        ir.code
+        from iam_user iu
+        join iam_member_role imr on iu.id = imr.member_id
+        join iam_role ir on imr.role_id = ir.id
+        join hpfm_tenant ht on ir.h_tenant_id = ht.tenant_id
+        where iu.id = #{userId}
+        and iu.organization_id = #{organizationId}
+        and imr.member_type = 'user';
+    </select>
+</mapper>

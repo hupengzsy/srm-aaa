@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="org.srm.iam.infra.mapper.IamMenuMapper">
+    <!-- 可根据自己的需求，是否要使用 -->
+    <resultMap id="BaseResultMap" type="org.srm.iam.domain.entity.Menu">
+        <result column="id" property="id" jdbcType="DECIMAL"/>
+        <result column="code" property="code" jdbcType="VARCHAR"/>
+        <result column="name" property="name" jdbcType="VARCHAR"/>
+        <result column="h_quick_index" property="hQuickIndex" jdbcType="VARCHAR"/>
+        <result column="fd_level" property="fdLevel" jdbcType="VARCHAR"/>
+        <result column="parent_id" property="parentId" jdbcType="DECIMAL"/>
+        <result column="type" property="type" jdbcType="VARCHAR"/>
+        <result column="sort" property="sort" jdbcType="DECIMAL"/>
+        <result column="is_default" property="isDefault" jdbcType="DECIMAL"/>
+        <result column="icon" property="icon" jdbcType="VARCHAR"/>
+        <result column="route" property="route" jdbcType="VARCHAR"/>
+        <result column="h_custom_flag" property="hCustomFlag" jdbcType="DECIMAL"/>
+        <result column="h_tenant_id" property="hTenantId" jdbcType="DECIMAL"/>
+        <result column="h_level_path" property="hLevelPath" jdbcType="VARCHAR"/>
+        <result column="h_virtual_flag" property="hVirtualFlag" jdbcType="DECIMAL"/>
+        <result column="h_controller_type" property="hControllerType" jdbcType="VARCHAR"/>
+        <result column="object_version_number" property="objectVersionNumber" jdbcType="DECIMAL"/>
+        <result column="created_by" property="createdBy" jdbcType="DECIMAL"/>
+        <result column="creation_date" property="creationDate" jdbcType="DATE"/>
+        <result column="last_updated_by" property="lastUpdatedBy" jdbcType="DECIMAL"/>
+        <result column="last_update_date" property="lastUpdateDate" jdbcType="DATE"/>
+        <result column="h_description" property="hDescription" jdbcType="VARCHAR"/>
+        <result column="h_enabled_flag" property="hEnabledFlag" jdbcType="DECIMAL"/>
+        <result column="CATEGORY" property="category" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <resultMap id="dtoResultMap" type="org.srm.iam.api.dto.IamMenuDTO">
+        <result column="id" property="id" jdbcType="DECIMAL"/>
+        <result column="name" property="name" jdbcType="VARCHAR"/>
+        <result column="srm_function_module" property="srmFunctionModule" jdbcType="VARCHAR"/>
+        <result column="h_enabled_flag" property="enabledFlag" jdbcType="DECIMAL"/>
+        <result column="creation_date" property="creationDate" jdbcType="DATE"/>
+    </resultMap>
+
+    <select id="queryMenuByTenant" resultType="org.srm.iam.domain.entity.Menu">
+        SELECT
+            im_m.id,
+            im_m.name
+        FROM
+            iam_role ir
+            INNER JOIN iam_role tpl_ir ON tpl_ir.code = 'role/organization/default/template/administrator' AND tpl_ir.id = ir.h_inherit_role_id
+            INNER JOIN iam_role_permission irp ON irp.role_id = ir.id AND irp.type = 'PS'
+            INNER JOIN iam_menu im_p ON im_p.id = irp.permission_id
+            INNER JOIN iam_menu im_m ON im_m.id = im_p.parent_id and im_m.h_enabled_flag = 1
+        WHERE
+            ir.h_tenant_id = #{tenantId}
+            AND im_m.h_virtual_flag = 0
+            <if test="menuName != null and menuName != ''">
+                AND im_m.name LIKE "%"#{menuName}"%"
+            </if>
+            <if test="customFlag != null and customFlag != ''">
+                AND im_m.h_custom_flag = #{customFlag}
+            </if>
+        GROUP BY
+            im_m.id,
+            im_m.name
+    </select>
+
+    <select id="queryMenu" resultMap="dtoResultMap">
+        SELECT
+            menu.id,
+            menu.NAME,
+            root.NAME AS srm_function_module,
+            menu.h_enabled_flag,
+            menu.creation_date
+        FROM
+            iam_menu menu
+            JOIN iam_menu root ON menu.h_level_path LIKE concat( root.h_level_path, '|%' )
+        WHERE
+            menu.h_virtual_flag = 0
+            AND root.type = 'dir'
+            AND menu.type = 'menu'
+            AND menu.h_custom_flag = 0
+            AND menu.fd_level = 'organization'
+            <if test="menuName != null and menuName != ''">
+                <bind name="menuNameLike" value="'%' + menuName + '%'"/>
+                AND menu.name LIKE #{menuNameLike}
+            </if>
+        GROUP BY
+            menu.id,
+            menu.name,
+            root.name,
+            menu.h_enabled_flag,
+            menu.creation_date
+    </select>
+    <select id="queryMenuTenantZero" resultType="org.srm.iam.domain.entity.Menu">
+        SELECT
+	        im_m.id,
+	        im_m.name
+        FROM
+	        iam_role ir
+	        INNER JOIN iam_role_permission irp ON irp.role_id = ir.id AND irp.type = 'PS'
+	        INNER JOIN iam_menu im_p ON im_p.id = irp.permission_id
+	        INNER JOIN iam_menu im_m ON im_m.id = im_p.parent_id
+	        AND im_m.h_enabled_flag = 1
+        WHERE
+	        ir.h_tenant_id = 0
+	        AND ir.code = 'role/organization/default/template/administrator'
+	        AND im_m.h_virtual_flag = 0
+            <if test="menuName != null and menuName != ''">
+                AND im_m.name LIKE "%"#{menuName}"%"
+            </if>
+            <if test="customFlag != null and customFlag != ''">
+                AND im_m.h_custom_flag = #{customFlag}
+            </if>
+        GROUP BY
+	        im_m.id,
+	        im_m.name
+    </select>
+</mapper>

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="org.srm.iam.infra.mapper.ApproveRegisterCompanyRepositoryMapper">
+
+    <resultMap id="BaseResultMap" type="org.hzero.iam.domain.entity.Tenant">
+        <result column="tenant_id" property="tenantId" jdbcType="DECIMAL"/>
+        <result column="tenant_name" property="tenantName" jdbcType="VARCHAR"/>
+        <result column="tenant_num" property="tenantNum" jdbcType="VARCHAR"/>
+        <result column="enabled_flag" property="enabledFlag" jdbcType="DECIMAL"/>
+        <result column="object_version_number" property="objectVersionNumber" jdbcType="DECIMAL"/>
+        <result column="created_by" property="createdBy" jdbcType="DECIMAL"/>
+        <result column="creation_date" property="creationDate" jdbcType="DATE"/>
+        <result column="last_updated_by" property="lastUpdatedBy" jdbcType="DECIMAL"/>
+        <result column="last_update_date" property="lastUpdateDate" jdbcType="DATE"/>
+        <result column="limit_user_qty" property="limitUserQty" jdbcType="DECIMAL"/>
+    </resultMap>
+
+    <select id="getTenantByUserId" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        select
+            t.tenant_id,
+            t.tenant_name,
+            t.tenant_num,
+            t.enabled_flag,
+            t.object_version_number,
+            t.created_by,
+            t.creation_date,
+            t.last_updated_by,
+            t.last_update_date,
+            t.limit_user_qty
+        from hpfm_tenant t
+                 join iam_user u on u.organization_id = t.tenant_id
+                 join hiam_user_info ui on ui.user_id = u.id
+        where
+          t.tenant_id != 0
+          and ui.user_source != 1
+          and u.id = #{userId}
+    </select>
+    <select id="selectUserAdminRole" resultType="java.lang.Long">
+        SELECT
+            ir.id
+        FROM
+            iam_user iu
+            JOIN iam_member_role imr ON iu.id = imr.member_id
+            JOIN iam_role ir ON ir.id = imr.role_id
+            JOIN iam_role irp ON irp.id = ir.h_inherit_role_id
+        WHERE
+            irp.h_tenant_id = 0
+            AND irp.name = '租户管理员模板'
+            AND iu.id = #{userId}
+    </select>
+
+</mapper>

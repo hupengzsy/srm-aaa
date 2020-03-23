@@ -1,0 +1,355 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="org.srm.iam.infra.mapper.RoleAuthDataLineWrapperMapper">
+    <!-- 可根据自己的需求，是否要使用 -->
+
+    <select id="pageCustomer" resultType="org.srm.iam.domain.entity.SrmRoleAuthDataLine">
+        SELECT
+        sp.company_id data_id,
+        hc.company_name data_name,
+        hc.company_num data_code,
+        sp.tenant_id tenant_id
+        FROM
+        spfm_partner sp
+        JOIN hpfm_company hc ON sp.company_id = hc.company_id
+        WHERE
+        1 = 1
+        AND sp.partner_tenant_id = #{tenantId,jdbcType=DECIMAL}
+        AND sp.company_id NOT IN (
+        SELECT
+        data_id
+        FROM
+        hiam_role_auth_data_line
+        WHERE
+        auth_data_id =
+        (
+        SELECT
+        auth_data_id
+        FROM hiam_role_auth_data hua
+        WHERE hua.role_id = #{roleId} and hua.tenant_id=#{tenantId} and hua.authority_type_code = 'CUSTOMER')
+        )
+
+        <if test='dataCode != null'>
+            <bind name="dataCodeLike" value="'%' + dataCode + '%'"/>
+            AND hc.company_num like #{dataCodeLike}
+        </if>
+        <if test='dataName != null'>
+            <bind name="dataNameLike" value="'%' + dataName + '%'"/>
+            AND hc.company_name like #{dataNameLike}
+        </if>
+        and sp.enabled_flag = 1
+        GROUP BY
+        sp.company_id,sp.tenant_id,hc.company_name,hc.company_num
+    </select>
+
+    <select id="pageSupplier" resultType="org.srm.iam.domain.entity.SrmRoleAuthDataLine">
+        SELECT
+        sc.company_id data_id,
+        sc.company_num data_code,
+        sc.company_name data_name,
+        sc.tenant_id tenant_id
+        FROM
+        hpfm_company sc
+        WHERE
+        1 = 1
+        AND EXISTS (
+        SELECT
+        1
+        FROM
+        spfm_partner p
+        WHERE
+        1 = 1
+        AND p.partner_company_id = sc.company_id
+        AND p.tenant_id = #{tenantId,jdbcType=DECIMAL}
+        )
+        AND  sc.company_id NOT IN(
+        SELECT
+        data_id
+        FROM
+        hiam_role_auth_data_line
+        WHERE
+        auth_data_id IN
+        (
+        SELECT
+        auth_data_id
+        FROM hiam_role_auth_data hua
+        WHERE hua.role_id = #{roleId} and hua.tenant_id=#{tenantId} and hua.authority_type_code = 'SUPPLIER')
+
+        )
+        <if test='dataCode != null'>
+            <bind name="dataCodeLike" value="'%' + dataCode + '%'"/>
+            AND sc.company_num like #{dataCodeLike}
+        </if>
+        <if test='dataName != null'>
+            <bind name="dataNameLike" value="'%' + dataName + '%'"/>
+            AND sc.company_name like #{dataNameLike}
+        </if>
+        and enabled_flag = 1
+    </select>
+
+    <select id="pagePurchaseCategory" resultType="org.srm.iam.domain.entity.SrmRoleAuthDataLine">
+        SELECT
+        category_id data_id,
+        category_code data_code,
+        category_name data_name,
+        tenant_id tenant_id
+        FROM
+        smdm_item_category
+        where
+        1=1
+        AND tenant_id = #{tenantId,jdbcType=DECIMAL}
+        AND category_id NOT IN (
+        SELECT
+        data_id
+        FROM
+        hiam_role_auth_data_line
+        WHERE
+        tenant_id = #{tenantId}
+        AND auth_data_id =
+        (
+        SELECT
+        auth_data_id
+        FROM hiam_role_auth_data hua
+        WHERE hua.role_id = #{roleId} and hua.tenant_id=#{tenantId} and hua.authority_type_code = 'PURCHASE_CATEGORY')
+        )
+        <if test="dataCode != null and dataCode!= ''">
+            <bind name="dataCodeLike" value="'%' + dataCode + '%'" />
+            AND category_code like #{dataCodeLike}
+        </if>
+        <if test="dataName != null and dataName != ''">
+            <bind name="dataNameLike" value="'%' + dataName + '%'" />
+            AND category_name like #{dataNameLike}
+        </if>
+        and enabled_flag = 1
+    </select>
+
+    <select id="pagePurchaseItem" resultType="org.hzero.iam.domain.entity.RoleAuthDataLine">
+        <bind name="lang" value="@io.choerodon.mybatis.helper.LanguageHelper@language()"/>
+        SELECT
+        hu.item_id data_id,
+        hu.item_code data_code,
+        hu.item_name data_name,
+        hu.tenant_id,
+        httl.tenant_name
+        from
+        smdm_item hu
+        join hpfm_tenant ht on hu.tenant_id = ht.tenant_id
+        LEFT JOIN hpfm_tenant_tl httl ON ht.tenant_id = httl.tenant_id AND httl.lang = #{lang}
+        where hu.tenant_id IN (0, #{tenantId})
+        and hu.item_id not in(
+        SELECT
+        data_id
+        FROM
+        hiam_role_auth_data_line
+        WHERE
+        hu.tenant_id = #{tenantId}
+        AND auth_data_id =
+        (
+        SELECT
+        auth_data_id
+        FROM hiam_role_auth_data hua
+        WHERE hua.role_id = #{roleId} and hua.tenant_id=#{tenantId} and hua.authority_type_code = 'PURCHASE_ITEM ')
+        )
+        <if test="dataCode != null and dataCode!= ''">
+            <bind name="dataCodeLike" value="'%' + dataCode + '%'" />
+            AND hu.item_code like #{dataCodeLike}
+        </if>
+        <if test="dataName != null and dataName != ''">
+            <bind name="dataNameLike" value="'%' + dataName + '%'" />
+            AND hu.item_name like #{dataNameLike}
+        </if>
+        and hu.enabled_flag = 1
+    </select>
+
+
+    <select id="pageSupplierItem" resultType="org.srm.iam.domain.entity.SrmRoleAuthDataLine">
+        SELECT
+        category_id data_id,
+        category_code data_code,
+        category_name data_name
+        FROM
+        smdm_item_category
+        where
+        1=1
+        AND tenant_id = #{tenantId}
+        AND category_id NOT IN (
+        SELECT
+        data_id
+        FROM
+        hiam_user_authority_line
+        WHERE
+        tenant_id = #{tenantId}
+        AND authority_id =
+        (
+        SELECT
+        authority_id
+        FROM hiam_user_authority hua
+        WHERE hua.user_id = #{roleId} and hua.tenant_id=#{tenantId} and hua.authority_type_code = 'SUPPLIER_ITEM')
+
+        )
+        <if test="dataCode != null and dataCode!= ''">
+            <bind name="dataCodeLike" value="'%' + dataCode + '%'" />
+            AND category_code like #{dataCodeLike}
+        </if>
+        <if test="dataName != null and dataName != ''">
+            <bind name="dataNameLike" value="'%' + dataName + '%'" />
+            AND category_name like #{dataNameLike}
+        </if>
+        and enabled_flag = 1
+    </select>
+
+    <select id="pageGroup" resultType="org.hzero.iam.domain.entity.RoleAuthDataLine">
+        <bind name="lang" value="@io.choerodon.mybatis.helper.LanguageHelper@language()"/>
+        SELECT
+        hu.unit_id data_id,
+        hu.unit_code data_code,
+        hu.unit_name data_name,
+        hu.tenant_id,
+        httl.tenant_name
+        from
+        hpfm_unit hu
+        join hpfm_tenant ht on hu.tenant_id = ht.tenant_id
+        LEFT JOIN hpfm_tenant_tl httl ON ht.tenant_id = httl.tenant_id AND httl.lang = #{lang}
+        where hu.tenant_id IN (0, #{tenantId})
+        and hu.unit_id not in(
+        SELECT
+        data_id
+        FROM
+        hiam_role_auth_data_line
+        WHERE
+        hu.tenant_id = #{tenantId}
+        AND auth_data_id =
+        (
+        SELECT
+        auth_data_id
+        FROM hiam_role_auth_data hua
+        WHERE hua.role_id = #{roleId} and hua.tenant_id=#{tenantId} and hua.authority_type_code = 'GROUP')
+        )
+        <if test="dataCode != null and dataCode!= ''">
+            <bind name="dataCodeLike" value="'%' + dataCode + '%'" />
+            AND hu.unit_code like #{dataCodeLike}
+        </if>
+        <if test="dataName != null and dataName != ''">
+            <bind name="dataNameLike" value="'%' + dataName + '%'" />
+            AND hu.unit_name like #{dataNameLike}
+        </if>
+        and hu.enabled_flag = 1
+        and hu.unit_type_code in ('G','C')
+    </select>
+
+    <select id="pageUnit" resultType="org.hzero.iam.domain.entity.RoleAuthDataLine">
+        <bind name="lang" value="@io.choerodon.mybatis.helper.LanguageHelper@language()"/>
+        SELECT
+        hu.unit_id data_id,
+        hu.unit_code data_code,
+        hu.unit_name data_name,
+        hu.tenant_id,
+        httl.tenant_name
+        from
+        hpfm_unit hu
+        join hpfm_tenant ht on hu.tenant_id = ht.tenant_id
+        LEFT JOIN hpfm_tenant_tl httl ON ht.tenant_id = httl.tenant_id AND httl.lang = #{lang}
+        where hu.tenant_id IN (0, #{tenantId})
+        and hu.unit_id not in(
+        SELECT
+        data_id
+        FROM
+        hiam_role_auth_data_line
+        WHERE
+        hu.tenant_id = #{tenantId}
+        AND auth_data_id =
+        (
+        SELECT
+        auth_data_id
+        FROM hiam_role_auth_data hua
+        WHERE hua.role_id = #{roleId} and hua.tenant_id=#{tenantId} and hua.authority_type_code = 'UNIT')
+        )
+        <if test="dataCode != null and dataCode!= ''">
+            <bind name="dataCodeLike" value="'%' + dataCode + '%'" />
+            AND hu.unit_code like #{dataCodeLike}
+        </if>
+        <if test="dataName != null and dataName != ''">
+            <bind name="dataNameLike" value="'%' + dataName + '%'" />
+            AND hu.unit_name like #{dataNameLike}
+        </if>
+        and hu.enabled_flag = 1
+        and hu.unit_type_code= 'D'
+    </select>
+
+    <select id="pagePosition" resultType="org.hzero.iam.domain.entity.RoleAuthDataLine">
+        <bind name="lang" value="@io.choerodon.mybatis.helper.LanguageHelper@language()"/>
+        SELECT
+        hp.position_id data_id,
+        hp.position_code data_code,
+        hp.position_name data_name,
+        hp.tenant_id,
+        httl.tenant_name
+        from
+        hpfm_position hp
+        join hpfm_tenant ht on hp.tenant_id = ht.tenant_id
+        LEFT JOIN hpfm_tenant_tl httl ON ht.tenant_id = httl.tenant_id AND httl.lang = #{lang}
+        where hp.tenant_id IN (0, #{tenantId})
+        and hp.position_id not in(
+        SELECT
+        data_id
+        FROM
+        hiam_role_auth_data_line
+        WHERE
+        hp.tenant_id = #{tenantId}
+        AND auth_data_id =
+        (
+        SELECT
+        auth_data_id
+        FROM hiam_role_auth_data hua
+        WHERE hua.role_id = #{roleId} and hua.tenant_id=#{tenantId} and hua.authority_type_code = 'POSITION')
+        )
+        <if test="dataCode != null and dataCode!= ''">
+            <bind name="dataCodeLike" value="'%' + dataCode + '%'" />
+            AND hp.position_code like #{dataCodeLike}
+        </if>
+        <if test="dataName != null and dataName != ''">
+            <bind name="dataNameLike" value="'%' + dataName + '%'" />
+            AND hp.position_name like #{dataNameLike}
+        </if>
+        and hp.enabled_flag = 1
+    </select>
+
+    <select id="pageEmployee" resultType="org.hzero.iam.domain.entity.RoleAuthDataLine">
+        <bind name="lang" value="@io.choerodon.mybatis.helper.LanguageHelper@language()"/>
+        SELECT
+        he.employee_id data_id,
+        he.employee_num data_code,
+        he.name data_name,
+        he.tenant_id,
+        httl.tenant_name
+        from
+        hpfm_employee he
+        join hpfm_tenant ht on he.tenant_id = ht.tenant_id
+        LEFT JOIN hpfm_tenant_tl httl ON ht.tenant_id = httl.tenant_id AND httl.lang = #{lang}
+        where he.tenant_id IN (0, #{tenantId})
+        and he.employee_id not in(
+        SELECT
+        data_id
+        FROM
+        hiam_role_auth_data_line
+        WHERE
+        he.tenant_id = #{tenantId}
+        AND auth_data_id =
+        (
+        SELECT
+        auth_data_id
+        FROM hiam_role_auth_data hua
+        WHERE hua.role_id = #{roleId} and hua.tenant_id=#{tenantId} and hua.authority_type_code = 'EMPLOYEE')
+        )
+        <if test="dataCode != null and dataCode!= ''">
+            <bind name="dataCodeLike" value="'%' + dataCode + '%'" />
+            AND he.employee_num like #{dataCodeLike}
+        </if>
+        <if test="dataName != null and dataName != ''">
+            <bind name="dataNameLike" value="'%' + dataName + '%'" />
+            AND he.name like #{dataNameLike}
+        </if>
+        and he.enabled_flag = 1
+    </select>
+
+</mapper>

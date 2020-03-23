@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="org.srm.iam.infra.mapper.CompanyImportMapper">
+
+    <select id="queryTenantId" resultType="org.srm.iam.api.dto.TenantEsDTO">
+        SELECT tenant_id, es_tenant_id, external_system_code, object_version_number FROM hpfm_tenant_es WHERE
+        <foreach collection="tenantEs" item="tenant" open="(" separator="OR" close=")">
+            external_system_code = #{tenant.externalSystemCode} AND es_tenant_id = #{tenant.esTenantId}
+        </foreach>
+    </select>
+
+    <select id="queryExistUserEs" resultType="org.srm.iam.domain.entity.UserEs">
+        SELECT * FROM iam_user_es WHERE
+        <foreach collection="userEsList" item="userEs" open="(" separator="OR" close=")">
+            external_system_code = #{userEs.externalSystemCode} AND es_user_id = #{userEs.esUserId}
+        </foreach>
+    </select>
+
+    <select id="queryAllRoleByTenantId" resultType="org.hzero.iam.domain.entity.Role">
+        SELECT id, name, h_tenant_id tenantId FROM iam_role WHERE
+        <foreach collection="tenantIdList" item="id" separator="OR">
+            (h_tenant_id = #{id}  AND is_enabled = 1)
+        </foreach>
+    </select>
+
+    <select id="queryManagerByRole" resultType="org.hzero.iam.domain.entity.User">
+        SELECT imr.member_id id, ir.h_tenant_id organizationId  FROM iam_member_role imr LEFT JOIN iam_role ir ON ir.id = imr.role_id
+        WHERE ir.code = 'administrator' order by imr.member_id AND ir.h_tenant_id IN
+        <foreach collection="tenantIds" open="(" item="tenantId" separator="OR" close=")">
+            #{tenantId}
+        </foreach>
+    </select>
+
+</mapper>
