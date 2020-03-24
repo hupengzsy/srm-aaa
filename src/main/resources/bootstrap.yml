@@ -39,8 +39,8 @@ spring:
       label: ${SPRING_CLOUD_CONFIG_LABEL:}
 eureka:
   instance:
-    # 配置hostname
-    hostname: srm-aaa-eureka
+    # 以IP注册到注册中心
+    preferIpAddress: ${EUREKA_INSTANCE_PREFER_IP_ADDRESS:true} 
     leaseRenewalIntervalInSeconds: 10
     leaseExpirationDurationInSeconds: 30
     # 服务的一些元数据信息
